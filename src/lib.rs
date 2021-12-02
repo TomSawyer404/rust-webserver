@@ -3,7 +3,7 @@ use std::{
     thread,
 };
 
-struct Job;
+type Job = Box<dyn FnOnce() + Send + 'static>;
 
 pub struct ThreadPool {
     workers: Vec<Worker>,
@@ -35,6 +35,8 @@ impl ThreadPool {
     where
         F: FnOnce() + Send + 'static,
     {
+        let job = Box::new(f);
+        self.sender.send(job).unwrap();
     }
 }
 
@@ -44,13 +46,16 @@ struct Worker {
 }
 
 impl Worker {
-    fn new(num: usize, receiver: Arc<Mutex<mpsc::Receiver<Job>>>) -> Self {
-        let thread = thread::spawn(|| {
-            receiver;
+    fn new(id: usize, receiver: Arc<Mutex<mpsc::Receiver<Job>>>) -> Self {
+        let thread = thread::spawn(move || {
+            while let Ok(job) = receiver.lock().unwrap().recv() {
+                println!("Worker {} got a job; executing ...", id);
+                job();
+            }
         });
 
         Worker {
-            id: (num),
+            id: (id),
             thread: (thread),
         }
     }
