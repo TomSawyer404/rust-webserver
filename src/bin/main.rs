@@ -4,14 +4,16 @@ use std::net::TcpListener;
 use std::net::TcpStream;
 use std::thread;
 use std::time::Duration;
+use web_server::ThreadPool;
 
 fn main() {
     let listenser = TcpListener::bind("127.0.0.1:7878").unwrap();
     println!("TCP connection established! PORT:7878");
+    let pool = ThreadPool::new(4);
 
     for stream in listenser.incoming() {
         let stream = stream.unwrap();
-        thread::spawn(|| {
+        pool.execute(|| {
             handle_connection(stream);
         });
     }
