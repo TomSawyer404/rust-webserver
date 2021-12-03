@@ -40,9 +40,20 @@ impl ThreadPool {
     }
 }
 
+impl Drop for ThreadPool {
+    fn drop(&mut self) {
+        for work in &mut self.workers {
+            println!("Shutting down worker {}", work.id);
+            if let Some(thread) = work.thread.take() {
+                thread.join().unwrap();
+            }
+        }
+    }
+}
+
 struct Worker {
     id: usize,
-    thread: thread::JoinHandle<()>,
+    thread: Option<thread::JoinHandle<()>>,
 }
 
 impl Worker {
@@ -56,7 +67,7 @@ impl Worker {
 
         Worker {
             id: (id),
-            thread: (thread),
+            thread: Some(thread),
         }
     }
 }
